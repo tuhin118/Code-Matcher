@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CODE MATCHER // SYSTEM v1.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-0:#000000;
+  --bg-1:#0a0000;
+  --bg-2:#120202;
+  --panel:#0d0303;
+  --panel-2:#160404;
+  --border:#3a0808;
+  --border-hot:#ff1f1f;
+  --text:#e8d5d5;
+  --muted:#7a5555;
+  --red:#ff1f1f;
+  --red-bright:#ff4444;
+  --red-glow:0 0 8px #ff1f1f, 0 0 20px #ff1f1f55, 0 0 40px #ff1f1f22;
+  --red-glow-soft:0 0 6px #ff1f1f88, 0 0 14px #ff1f1f33;
+  --green:#00ff88;
+  --green-glow:0 0 8px #00ff88, 0 0 20px #00ff8855;
+  --radius:6px;
+}
+
+html, body { height:100%; }
+
+body {
+  font-family:'JetBrains Mono','Share Tech Mono',ui-monospace,monospace;
+  background: var(--bg-0);
+  color: var(--text);
+  min-height:100vh;
+  padding:24px 20px 60px;
+  line-height:1.55;
+  overflow-x:hidden;
+  position:relative;
+}
+
+/* Matrix-ish subtle red grid background */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background-image:
+    linear-gradient(rgba(255,31,31,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,31,31,.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events:none;
+  z-index:0;
+  mask-image: radial-gradient(circle at 50% 40%, #000 30%, transparent 85%);
+  -webkit-mask-image: radial-gradient(circle at 50% 40%, #000 30%, transparent 85%);
+}
+
+/* Scanlines overlay */
+body::after {
+  content:'';
+  position:fixed; inset:0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255,31,31,.035) 0px,
+    rgba(255,31,31,.035) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  pointer-events:none;
+  z-index:9999;
+  mix-blend-mode:overlay;
+  animation: scan 8s linear infinite;
+}
+@keyframes scan {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100px; }
+}
+
+.container { max-width:1280px; margin:0 auto; position:relative; z-index:1; }
+
+/* Header */
+header { text-align:center; margin-bottom:28px; position:relative; }
+
+.term-bar {
+  display:flex; align-items:center; gap:8px;
+  justify-content:center; margin-bottom:14px;
+  font-size:11px; letter-spacing:.25em; color:var(--muted);
+  text-transform:uppercase;
+}
+.term-bar .dot {
+  width:8px; height:8px; border-radius:50%;
+  background:var(--red); box-shadow:var(--red-glow);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50% { opacity:.4; transform:scale(.8); }
+}
+
+h1 {
+  font-family:'Share Tech Mono','JetBrains Mono',monospace;
+  font-size: clamp(28px,4.5vw,52px);
+  font-weight:800;
+  letter-spacing:.06em;
+  color:#fff;
+  text-transform:uppercase;
+  position:relative;
+  text-shadow:
+    0 0 4px #fff,
+    0 0 12px var(--red),
+    0 0 30px var(--red),
+    0 0 60px #ff1f1f66;
+  animation: flicker 4s infinite;
+}
+@keyframes flicker {
+  0%,19%,21%,23%,25%,54%,56%,100% { opacity:1; }
+  20%,22%,24%,55% { opacity:.75; }
+}
+h1::before, h1::after {
+  content:attr(data-text);
+  position:absolute; top:0; left:0; width:100%;
+  overflow:hidden;
+}
+h1::before {
+  color:var(--red);
+  animation: glitch-1 3s infinite linear alternate-reverse;
+  clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
+}
+h1::after {
+  color:#00ffff;
+  animation: glitch-2 2.5s infinite linear alternate-reverse;
+  clip-path: polygon(0 55%, 100% 55%, 100% 100%, 0 100%);
+}
+@keyframes glitch-1 {
+  0%,90%,100% { transform: translate(0,0); opacity:.85; }
+  92% { transform: translate(-3px,1px); }
+  94% { transform: translate(2px,-1px); }
+  96% { transform: translate(-2px,2px); }
+}
+@keyframes glitch-2 {
+  0%,88%,100% { transform: translate(0,0); opacity:.7; }
+  90% { transform: translate(3px,-1px); }
+  93% { transform: translate(-2px,1px); }
+  95% { transform: translate(2px,-2px); }
+}
+
+.sub {
+  color:var(--muted); margin-top:10px; font-size:13px;
+  letter-spacing:.05em;
+}
+.sub .prompt { color:var(--red-bright); text-shadow:var(--red-glow-soft); }
+.cursor {
+  display:inline-block; width:9px; height:16px;
+  background:var(--red); margin-left:3px;
+  vertical-align:middle;
+  box-shadow: var(--red-glow-soft);
+  animation: blink 1s steps(2,start) infinite;
+}
+@keyframes blink { 50% { opacity:0; } }
+
+/* Options bar */
+.options {
+  display:flex; flex-wrap:wrap; gap:18px; justify-content:center;
+  margin-bottom:20px; padding:12px 18px;
+  background: linear-gradient(180deg, var(--panel), var(--bg-1));
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  position:relative;
+  box-shadow: inset 0 0 20px #ff1f1f11, 0 0 20px #00000066;
+}
+.options::before {
+  content:'[ CONFIG ]';
+  position:absolute; top:-10px; left:14px;
+  padding:0 8px; font-size:10px; letter-spacing:.3em;
+  color:var(--red-bright); background:var(--bg-0);
+  text-shadow:var(--red-glow-soft);
+}
+.options label {
+  display:flex; align-items:center; gap:8px;
+  font-size:12.5px; color:var(--muted); cursor:pointer;
+  letter-spacing:.03em; transition:color .15s;
+}
+.options label:hover { color:var(--red-bright); }
+.options input[type="checkbox"] {
+  appearance:none; width:16px; height:16px;
+  border:1px solid var(--border-hot); border-radius:2px;
+  background:var(--bg-1); cursor:pointer;
+  position:relative; transition:all .15s;
+}
+.options input[type="checkbox"]:checked {
+  background:var(--red); box-shadow:var(--red-glow-soft);
+}
+.options input[type="checkbox"]:checked::after {
+  content:'✓'; position:absolute; top:-3px; left:2px;
+  color:#000; font-size:12px; font-weight:900;
+}
+
+/* Grid */
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+
+.panel {
+  background: linear-gradient(180deg, var(--panel), var(--bg-1));
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  overflow:hidden;
+  display:flex; flex-direction:column;
+  position:relative;
+  transition:border-color .2s, box-shadow .2s;
+  box-shadow: 0 0 24px #000000aa, inset 0 0 30px #ff1f1f08;
+}
+.panel::before, .panel::after {
+  content:''; position:absolute; width:14px; height:14px;
+  border:2px solid var(--red); pointer-events:none;
+  z-index:2;
+}
+.panel::before { top:-1px; left:-1px; border-right:none; border-bottom:none; }
+.panel::after  { bottom:-1px; right:-1px; border-left:none; border-top:none; }
+.panel:focus-within {
+  border-color:var(--border-hot);
+  box-shadow: 0 0 24px #ff1f1f33, inset 0 0 40px #ff1f1f10;
+}
+.panel:focus-within::before,
+.panel:focus-within::after { box-shadow:var(--red-glow-soft); }
+
+.panel-head {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 14px;
+  border-bottom:1px solid var(--border);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+}
+.panel-head .title {
+  font-size:12px; font-weight:700;
+  letter-spacing:.2em; text-transform:uppercase;
+  color:var(--red-bright);
+  text-shadow: var(--red-glow-soft);
+  display:flex; align-items:center; gap:8px;
+}
+.panel-head .title::before {
+  content:'▮'; color:var(--red);
+  animation: blink 1.2s steps(2,start) infinite;
+}
+.panel-head .stats {
+  font-size:11px; color:var(--muted);
+  font-variant-numeric:tabular-nums;
+  letter-spacing:.05em;
+}
+
+textarea {
+  width:100%; min-height:280px; padding:16px 18px;
+  background:transparent; color:#ffdada;
+  border:none; outline:none; resize:vertical;
+  font-family:'JetBrains Mono','Share Tech Mono',monospace;
+  font-size:13.5px; line-height:1.65;
+  caret-color: var(--red);
+  letter-spacing:.01em;
+}
+textarea::placeholder { color:#4a2a2a; font-style:italic; }
+textarea::selection { background:var(--red); color:#000; }
+
+/* Actions */
+.actions {
+  display:flex; flex-wrap:wrap; gap:12px;
+  justify-content:center; margin-bottom:22px;
+}
+button {
+  font:inherit; font-size:12.5px; font-weight:700;
+  letter-spacing:.15em; text-transform:uppercase;
+  padding:12px 22px; border-radius:var(--radius);
+  border:1px solid var(--border-hot);
+  background: linear-gradient(180deg, #1a0505, #0a0202);
+  color:var(--red-bright);
+  cursor:pointer;
+  position:relative;
+  transition:all .15s ease;
+  text-shadow: var(--red-glow-soft);
+  box-shadow: inset 0 0 12px #ff1f1f11, 0 0 0 #ff1f1f00;
+  overflow:hidden;
+}
+button::before {
+  content:''; position:absolute; inset:0;
+  background: linear-gradient(90deg, transparent, #ff1f1f22, transparent);
+  transform: translateX(-100%);
+  transition: transform .4s;
+}
+button:hover {
+  color:#fff;
+  border-color:#ff4444;
+  box-shadow: inset 0 0 20px #ff1f1f33, 0 0 18px #ff1f1f55;
+  text-shadow: 0 0 6px #fff, 0 0 12px var(--red);
+}
+button:hover::before { transform: translateX(100%); }
+button:active { transform:translateY(1px); }
+
+button.primary {
+  background: linear-gradient(180deg, #3a0000, #1a0000);
+  border-color:var(--red);
+  color:#fff;
+  box-shadow: inset 0 0 20px #ff1f1f33, 0 0 22px #ff1f1f44;
+}
+button.primary:hover {
+  background: linear-gradient(180deg, #5a0000, #2a0000);
+  box-shadow: inset 0 0 24px #ff1f1f55, 0 0 30px #ff1f1f88;
+}
+
+/* Result */
+.result {
+  background: linear-gradient(180deg, var(--panel), var(--bg-1));
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  overflow:hidden;
+  position:relative;
+  box-shadow: 0 0 30px #000000aa, inset 0 0 30px #ff1f1f08;
+}
+.result-head {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 18px;
+  border-bottom:1px solid var(--border);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  flex-wrap:wrap; gap:10px;
+}
+.badge {
+  display:inline-flex; align-items:center; gap:10px;
+  padding:7px 16px; border-radius:999px;
+  font-size:12px; font-weight:700;
+  letter-spacing:.15em; text-transform:uppercase;
+}
+.badge.match {
+  background: #00ff8815;
+  color:var(--green);
+  border:1px solid #00ff8877;
+  box-shadow: inset 0 0 14px #00ff8822, 0 0 14px #00ff8844;
+  text-shadow: var(--green-glow);
+}
+.badge.nomatch {
+  background: #ff1f1f15;
+  color:var(--red-bright);
+  border:1px solid var(--border-hot);
+  box-shadow: inset 0 0 14px #ff1f1f22, 0 0 14px #ff1f1f55;
+  text-shadow: var(--red-glow-soft);
+}
+.badge.empty {
+  background: #1a0505;
+  color:var(--muted);
+  border:1px solid var(--border);
+}
+.badge .dot {
+  width:8px; height:8px; border-radius:50%;
+  background:currentColor;
+  box-shadow: 0 0 8px currentColor;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.similarity {
+  font-size:12px; color:var(--muted);
+  letter-spacing:.08em; text-transform:uppercase;
+}
+.similarity strong {
+  color:#fff;
+  font-size:15px;
+  font-variant-numeric:tabular-nums;
+  text-shadow: var(--red-glow-soft);
+}
+
+/* Diff */
+.diff {
+  max-height:500px; overflow:auto;
+  font-family:'JetBrains Mono',monospace;
+  font-size:13px; line-height:1.7;
+  background: #050101;
+  position:relative;
+}
+.diff::-webkit-scrollbar { width:10px; height:10px; }
+.diff::-webkit-scrollbar-track { background:#0a0202; }
+.diff::-webkit-scrollbar-thumb {
+  background:#3a0808; border-radius:4px;
+  border:2px solid #0a0202;
+}
+.diff::-webkit-scrollbar-thumb:hover { background:var(--red); }
+
+.diff .line {
+  display:grid; grid-template-columns:52px 52px 1fr;
+  border-bottom:1px solid #1a0505;
+  transition: background .12s;
+}
+.diff .line:hover { background:#0f0303; }
+
+.diff .ln {
+  padding:5px 10px; text-align:right;
+  color:#5a2a2a; background:#0a0202;
+  user-select:none; font-size:11.5px;
+  border-right:1px solid #1a0505;
+  font-variant-numeric:tabular-nums;
+}
+.diff .content {
+  padding:5px 14px;
+  white-space:pre-wrap; word-break:break-word;
+  color:#a88b8b;
+}
+
+.line.same .content { color:#7a6060; }
+.line.del {
+  background: linear-gradient(90deg, #ff1f1f18, transparent 60%);
+  border-left:3px solid var(--red);
+}
+.line.del .content {
+  color:#ff9a9a;
+  text-shadow: 0 0 6px #ff1f1f33;
+}
+.line.add {
+  background: linear-gradient(90deg, #00ff8818, transparent 60%);
+  border-left:3px solid var(--green);
+}
+.line.add .content {
+  color:#8affc5;
+  text-shadow: 0 0 6px #00ff8833;
+}
+
+.empty-state {
+  padding:40px 20px; text-align:center;
+  color:var(--muted); font-size:12.5px;
+  letter-spacing:.1em; text-transform:uppercase;
+}
+.empty-state::before {
+  content:'> '; color:var(--red-bright);
+}
+
+@media (max-width:720px) {
+  body { padding:16px 12px 40px; }
+  .grid { grid-template-columns:1fr; }
+  .diff .line { grid-template-columns:38px 38px 1fr; font-size:12px; }
+  .diff .ln { padding:4px 6px; font-size:10.5px; }
+  h1 { font-size:26px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="term-bar">
+      <span class="dot"></span>
+      SYSTEM ONLINE · ENCRYPTED CHANNEL
+      <span class="dot"></span>
+    </div>
+    <h1 data-text="CODE MATCHER">CODE MATCHER</h1>
+    <div class="sub">
+      <span class="prompt">root@matcher:~$</span> compare --left --right --secure
+      <span class="cursor"></span>
+    </div>
+  </header>
+
+  <div class="options">
+    <label><input type="checkbox" id="optCase"> ignore case</label>
+    <label><input type="checkbox" id="optSpace"> ignore extra spaces</label>
+    <label><input type="checkbox" id="optLine"> ignore line breaks</label>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="panel-head">
+        <span class="title">SOURCE_A</span>
+        <span class="stats" id="leftStats">0 chars · 0 lines</span>
+      </div>
+      <textarea id="left" placeholder="// paste original code or text here..."></textarea>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <span class="title">TARGET_B</span>
+        <span class="stats" id="rightStats">0 chars · 0 lines</span>
+      </div>
+      <textarea id="right" placeholder="// paste code to compare against..."></textarea>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="primary" id="btnCompare">▶ Execute Compare</button>
+    <button id="btnSwap">⇄ Swap</button>
+    <button id="btnClear">✕ Purge All</button>
+  </div>
+
+  <div class="result" id="result">
+    <div class="result-head">
+      <span class="badge empty" id="badge"><span class="dot"></span> Standby</span>
+      <span class="similarity" id="simText">awaiting input...</span>
+    </div>
+    <div class="diff" id="diff">
+      <div class="empty-state">No data processed yet</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const leftEl = $('left'), rightEl = $('right');
+  const leftStats = $('leftStats'), rightStats = $('rightStats');
+  const badge = $('badge'), simText = $('simText'), diffEl = $('diff');
+  const optCase = $('optCase'), optSpace = $('optSpace'), optLine = $('optLine');
+  const MAX_LINES = 3000;
+
+  function normalize(t) {
+    if (!optCase.checked) t = t.toLowerCase();
+    if (optSpace.checked) t = t.replace(/[ \t]+/g, ' ').replace(/[ \t]+$/gm, '');
+    if (optLine.checked) t = t.replace(/\s+/g, ' ').trim();
+    return t;
+  }
+
+  function updateStats() {
+    const l = leftEl.value, r = rightEl.value;
+    leftStats.textContent  = `${l.length} chars · ${l ? l.split('\n').length : 0} lines`;
+    rightStats.textContent = `${r.length} chars · ${r ? r.split('\n').length : 0} lines`;
+  }
+
+  function lcsDiff(a, b) {
+    const m = a.length, n = b.length, W = n + 1;
+    const dp = new Uint32Array((m + 1) * (n + 1));
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        if (a[i-1] === b[j-1]) dp[i*W+j] = dp[(i-1)*W+(j-1)] + 1;
+        else dp[i*W+j] = Math.max(dp[(i-1)*W+j], dp[i*W+(j-1)]);
+      }
+    }
+    const out = [];
+    let i = m, j = n;
+    while (i > 0 && j > 0) {
+      if (a[i-1] === b[j-1]) { out.push({type:'same', text:a[i-1], li:i, ri:j}); i--; j--; }
+      else if (dp[(i-1)*W+j] >= dp[i*W+(j-1)]) { out.push({type:'del', text:a[i-1], li:i}); i--; }
+      else { out.push({type:'add', text:b[j-1], ri:j}); j--; }
+    }
+    while (i > 0) { out.push({type:'del', text:a[i-1], li:i}); i--; }
+    while (j > 0) { out.push({type:'add', text:b[j-1], ri:j}); j--; }
+    return out.reverse();
+  }
+
+  function render(lines) {
+    const frag = document.createDocumentFragment();
+    for (const l of lines) {
+      const div = document.createElement('div');
+      div.className = 'line ' + l.type;
+      const a = document.createElement('span'); a.className = 'ln';
+      a.textContent = l.type === 'add' ? '' : (l.li || '');
+      const b = document.createElement('span'); b.className = 'ln';
+      b.textContent = l.type === 'del' ? '' : (l.ri || '');
+      const c = document.createElement('span'); c.className = 'content';
+      c.textContent = l.text === '' ? ' ' : l.text;
+      div.append(a, b, c);
+      frag.appendChild(div);
+    }
+    diffEl.innerHTML = '';
+    diffEl.appendChild(frag);
+  }
+
+  function setBadge(kind, label) {
+    badge.className = 'badge ' + kind;
+    badge.innerHTML = '<span class="dot"></span> ' + label;
+  }
+
+  function compare() {
+    const rawA = leftEl.value, rawB = rightEl.value;
+    if (!rawA && !rawB) {
+      setBadge('empty', 'No Input');
+      simText.textContent = 'awaiting input...';
+      diffEl.innerHTML = '<div class="empty-state">Nothing to compare</div>';
+      return;
+    }
+
+    const a = normalize(rawA), b = normalize(rawB);
+
+    if (a === b) {
+      setBadge('match', '✓ Perfect Match');
+      simText.innerHTML = 'Match: <strong>100%</strong>';
+      diffEl.innerHTML = '<div class="empty-state" style="color:#00ff88">>> identical data stream</div>';
+      return;
+    }
+
+    const aL = a.split('\n'), bL = b.split('\n');
+    if (aL.length > MAX_LINES || bL.length > MAX_LINES) {
+      setBadge('nomatch', '✗ Mismatch');
+      simText.textContent = 'input too large — shallow compare';
+      diffEl.innerHTML = '<div class="empty-state" style="color:#ff9a9a">>> payload exceeds line limit</div>';
+      return;
+    }
+
+    const diff = lcsDiff(aL, bL);
+    const same = diff.filter(d => d.type === 'same').length;
+    const total = Math.max(aL.length, bL.length) || 1;
+    const sim = Math.round((same / total) * 1000) / 10;
+
+    setBadge('nomatch', '✗ Mismatch Detected');
+    simText.innerHTML = `Match: <strong>${sim}%</strong> · ${same}/${total} lines`;
+    render(diff);
+  }
+
+  leftEl.addEventListener('input', updateStats);
+  rightEl.addEventListener('input', updateStats);
+  $('btnCompare').addEventListener('click', compare);
+  $('btnClear').addEventListener('click', () => {
+    leftEl.value = rightEl.value = '';
+    updateStats();
+    setBadge('empty', 'Standby');
+    simText.textContent = 'awaiting input...';
+    diffEl.innerHTML = '<div class="empty-state">No data processed yet</div>';
+  });
+  $('btnSwap').addEventListener('click', () => {
+    const t = leftEl.value;
+    leftEl.value = rightEl.value;
+    rightEl.value = t;
+    updateStats();
+  });
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); compare(); }
+  });
+
+  updateStats();
+})();
+</script>
+</body>
+</html>
